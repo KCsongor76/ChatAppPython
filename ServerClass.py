@@ -220,7 +220,7 @@ class ServerClass:
 
 
 if __name__ == "__main__":
-    HOST = '127.0.0.1'
+    HOST = '192.168.1.4'
     PORT = 5555
     server = ServerClass(HOST, PORT)
     server.start()

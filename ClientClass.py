@@ -98,6 +98,7 @@ class ClientClass:
             selected_user = self.user_list.get(tk.ACTIVE)
             if selected_user:
                 self.load_private_chat(selected_user)
+                self.root.withdraw()
 
                 message = Message(action=GET_PRIVATE_MESSAGES, username=selected_user)
                 self.client.send(message.to_json().encode("utf-8"))
@@ -131,7 +132,9 @@ class ClientClass:
             print(f"Error: {e}")
 
     def go_back(self):
-        pass
+        self.private_chat_window.destroy()
+        self.root.deiconify()
+        # self.load_chat_page()
 
     def send_private_message(self, selected_user):
         message = self.private_message_entry.get()
@@ -191,6 +194,6 @@ class ClientClass:
 
 
 if __name__ == "__main__":
-    HOST = '127.0.0.1'
+    HOST = '192.168.1.4'
     PORT = 5555
     client = ClientClass(HOST, PORT)
