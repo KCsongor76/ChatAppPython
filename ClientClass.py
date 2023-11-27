@@ -61,7 +61,7 @@ class ClientClass:
             for message in msg.message:
                 # we get all previous messages from the Message object, and display it
                 self.display_message(f"{message[0]}: {message[1]}")
-        else:
+        else:  # UNSUCCESSFUL LOGIN
             # display error message in GUI
             self.error_label.config(text=msg.message)
 
