@@ -15,9 +15,14 @@ class ClientClass:
         self.login_page()
         self.root.mainloop()
 
+        self.client_name = None
         self.title_username = None
 
     def login_page(self):
+        """
+        This page is shown on app start
+        :return:
+        """
         self.root.title("Chat App - Login")
 
         self.username_label = tk.Label(self.root, text="Username:")
@@ -39,20 +44,32 @@ class ClientClass:
         self.login_button.grid(row=3, columnspan=2, pady=10)
 
     def login(self):
+        """
+        Login button onClick
+        :return:
+        """
         username = self.username_entry.get()
         password = self.password_entry.get()
         login_msg = Message(action=LOGIN, username=username, password=password)
-        self.client.send(login_msg.to_json().encode("utf-8"))
-        response = self.client.recv(1024).decode("utf-8")
+        self.client.send(login_msg.to_json().encode("utf-8"))  # request to server sent here
+
+        response = self.client.recv(1024).decode("utf-8")  # response from server received here
         msg = Message.from_json(response)
         if msg.action == SUCCESSFUL_LOGIN:
+            self.client_name = username
             self.load_chat_page()
             for message in msg.message:
+                # we get all previous messages from the Message object, and display it
                 self.display_message(f"{message[0]}: {message[1]}")
         else:
+            # display error message in GUI
             self.error_label.config(text=msg.message)
 
     def load_chat_page(self):
+        """
+        Destroys the previous page (Login page), and loads the general chat page
+        :return:
+        """
         for widget in self.root.winfo_children():
             widget.destroy()
 
@@ -82,19 +99,21 @@ class ClientClass:
 
         # Receive and process usernames from the server
         response = self.client.recv(1024).decode("utf-8")
-        print(response)
         usernames_msg = Message.from_json(response)
-        print(usernames_msg)
         if usernames_msg.action == USER_LIST:
             usernames = usernames_msg.message
             for username in usernames:
                 self.user_list.insert(tk.END, username)
-        # TODO:
+
         self.user_list.bind('<Double-Button-1>', self.show_private_messages)
 
     def show_private_messages(self, event):
+        """
+        Closes general chat, opens private chat page
+        :param event:
+        :return:
+        """
         try:
-            # print("show private_messages")
             selected_user = self.user_list.get(tk.ACTIVE)
             if selected_user:
                 self.load_private_chat(selected_user)
@@ -106,6 +125,11 @@ class ClientClass:
             print(f"Error: {e}")
 
     def load_private_chat(self, selected_user):
+        """
+        Loads private chat page
+        :param selected_user:
+        :return:
+        """
         try:
             self.title_username = selected_user
 
@@ -132,29 +156,18 @@ class ClientClass:
             print(f"Error: {e}")
 
     def go_back(self):
+        """
+        Private chat button onClick function, closes private chat, reopens general chat page
+        :return:
+        """
         self.private_chat_window.destroy()
         self.root.deiconify()
-        # self.load_chat_page()
 
-    def send_private_message(self, selected_user):
-        message = self.private_message_entry.get()
-        send_msg = Message(action=PRIVATE_MESSAGE, message=message, username=selected_user)
-        self.client.send(send_msg.to_json().encode("utf-8"))
-        self.private_message_entry.delete(0, tk.END)
-
-    # def receive_private_messages(self, selected_user):
-    #     while True:
-    #         try:
-    #             message = self.client.recv(1024).decode("utf-8")
-    #             msg = Message.from_json(message)
-    #             msg.username = selected_user
-    #             if msg.action == PRIVATE_BROADCAST:
-    #                 self.display_private_message(msg.message)
-    #         except ConnectionResetError:
-    #             print("Disconnected from the server.")
-    #             break
-
-    def receive_messages(self):
+    def receive_messages(self, param=None):
+        """
+        Processing message from the server
+        :return:
+        """
         while True:
             try:
                 response = self.client.recv(1024).decode("utf-8")
@@ -166,18 +179,10 @@ class ClientClass:
                     self.display_private_message(message.message)
                 elif message.action == SHOW_PRIVATE_MESSAGES:
                     for msg in message.message:
-                        self.display_private_message(f"{msg[0]}: {msg[1]}", message.username)
+                        self.display_private_message(f"{msg[0]}: {msg[1]}")
             except ConnectionResetError:
                 print("Disconnected from the server.")
                 break
-
-    def display_private_message(self, message, receiver=None):
-        print("display_private_message")
-        if receiver == self.title_username or receiver is None:
-            self.private_chat_display.config(state=tk.NORMAL)
-            self.private_chat_display.insert(tk.END, message + "\n")
-            self.private_chat_display.config(state=tk.DISABLED)
-            self.private_chat_display.see(tk.END)
 
     def send_message(self):
         message_string = self.message_entry.get()
@@ -185,15 +190,28 @@ class ClientClass:
         self.client.send(message.to_json().encode("utf-8"))
         self.message_entry.delete(0, tk.END)
 
+    def send_private_message(self, selected_user):
+        message = self.private_message_entry.get()
+        send_msg = Message(action=PRIVATE_MESSAGE, message=message, username=selected_user)
+        self.client.send(send_msg.to_json().encode("utf-8"))
+        self.private_message_entry.delete(0, tk.END)
+
     def display_message(self, message):
-        # print("display_message")
         self.chat_display.config(state=tk.NORMAL)
         self.chat_display.insert(tk.END, message + "\n")
         self.chat_display.config(state=tk.DISABLED)
         self.chat_display.see(tk.END)
 
+    def display_private_message(self, message):
+        sender = message.split(":")[0]
+        if sender == self.title_username or sender == self.client_name:
+            self.private_chat_display.config(state=tk.NORMAL)
+            self.private_chat_display.insert(tk.END, message + "\n")
+            self.private_chat_display.config(state=tk.DISABLED)
+            self.private_chat_display.see(tk.END)
+
 
 if __name__ == "__main__":
-    HOST = '192.168.1.4'
+    HOST = '127.0.0.1'
     PORT = 5555
     client = ClientClass(HOST, PORT)
